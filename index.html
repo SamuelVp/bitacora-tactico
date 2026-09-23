@@ -14,8 +14,22 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ari
 header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:14px 18px}
 h1{font-size:20px;margin:0 0 4px} .sub{font-size:13px;color:var(--muted)}
 .wrap{max-width:1200px;margin:auto;padding:16px}
-.toolbar{display:grid;grid-template-columns:minmax(260px,1.2fr) minmax(210px,.9fr) auto auto;gap:10px;margin-bottom:14px}
+.toolbar{display:grid;grid-template-columns:minmax(320px,1.35fr) minmax(210px,.9fr) auto auto;gap:10px;margin-bottom:14px}
 select,button{font:inherit;border:1px solid var(--line);border-radius:10px;background:white;padding:10px 12px}
+.multi-select{position:relative;min-width:0}
+.multi-select-toggle{width:100%;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;padding-right:38px}
+.multi-select-toggle::after{content:"▾";position:absolute;right:13px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.multi-select.open .multi-select-toggle::after{content:"▴"}
+.multi-select-menu{display:none;position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:white;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:10px;max-height:62vh;overflow:auto}
+.multi-select.open .multi-select-menu{display:block}
+.multi-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;position:sticky;top:-10px;background:white;padding:0 0 8px;z-index:2}
+.multi-actions button{padding:8px 6px;font-size:13px}
+.section-master,.section-option{display:flex;align-items:flex-start;gap:9px;padding:8px 7px;border-radius:8px;cursor:pointer;line-height:1.25}
+.section-master{font-weight:700;border-bottom:1px solid var(--line);margin-bottom:4px}
+.section-option:hover,.section-master:hover{background:#f4f7fa}
+.section-master input,.section-option input{margin-top:2px;flex:0 0 auto;width:17px;height:17px}
+.section-option span{font-size:14px}
+.section-count{color:var(--muted);font-size:12px;margin-left:auto;padding-left:8px;white-space:nowrap}
 button{cursor:pointer} button.primary{background:var(--accent);color:white;border-color:var(--accent)}
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0 16px}
 .stat{background:white;border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
@@ -61,6 +75,9 @@ footer{padding:28px 16px;text-align:center;color:var(--muted);font-size:12px}
   }
   .toolbar select{min-width:0;width:100%}
   .toolbar button{width:100%}
+  .multi-select{width:100%}
+  .multi-select-menu{position:fixed;left:10px;right:10px;top:80px;max-height:70vh}
+  .multi-select-menu button{width:auto}
   .stats{
     grid-template-columns:repeat(4,1fr);
     gap:7px;
@@ -141,7 +158,21 @@ footer{padding:28px 16px;text-align:center;color:var(--muted);font-size:12px}
 </header>
 <div class="wrap">
   <div class="toolbar">
-    <select id="sectionFilter"></select>
+    <div class="multi-select" id="sectionMulti">
+      <button type="button" class="multi-select-toggle" id="sectionToggle">General · Todas las secciones</button>
+      <div class="multi-select-menu" id="sectionMenu">
+        <div class="multi-actions">
+          <button type="button" id="selectAllSections">Todas</button>
+          <button type="button" id="selectTodaySections">Solo hoy</button>
+          <button type="button" id="clearSections">Ninguna</button>
+        </div>
+        <label class="section-master">
+          <input type="checkbox" id="allSectionsCheck" checked>
+          <span>Todas las secciones</span>
+        </label>
+        <div id="sectionOptions"></div>
+      </div>
+    </div>
     <select id="modeFilter">
       <option value="all">Todas</option>
       <option value="unanswered">Solo sin evaluar</option>
@@ -178,7 +209,11 @@ let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
 let order = BANK.map(x=>x.id);
 let mobileIndex = 0;
 
-const sectionFilter = document.getElementById("sectionFilter");
+const sectionMulti = document.getElementById("sectionMulti");
+const sectionToggle = document.getElementById("sectionToggle");
+const sectionMenu = document.getElementById("sectionMenu");
+const sectionOptions = document.getElementById("sectionOptions");
+const allSectionsCheck = document.getElementById("allSectionsCheck");
 const modeFilter = document.getElementById("modeFilter");
 const list = document.getElementById("list");
 
@@ -188,9 +223,59 @@ function escapeHtml(s) {
 
 const sections = [...new Set(BANK.map(x=>x.section))];
 const sectionCounts = Object.fromEntries(sections.map(s => [s, BANK.filter(x=>x.section===s).length]));
-sectionFilter.innerHTML =
-  `<option value="all">General · Todas las secciones (${BANK.length})</option>` +
-  sections.map(s=>`<option value="${escapeHtml(s)}">${escapeHtml(s)} (${sectionCounts[s]})</option>`).join("");
+const SECTION_FILTER_KEY = "bitacora_tactico_sections_v2";
+let selectedSections;
+try {
+  const saved = JSON.parse(localStorage.getItem(SECTION_FILTER_KEY) || "null");
+  const valid = Array.isArray(saved) ? saved.filter(s => sections.includes(s)) : [];
+  selectedSections = new Set(valid.length ? valid : sections);
+} catch(e) {
+  selectedSections = new Set(sections);
+}
+
+function sectionId(i){ return `sec-check-${i}`; }
+function renderSectionOptions(){
+  sectionOptions.innerHTML = sections.map((s,i)=>`
+    <label class="section-option" for="${sectionId(i)}">
+      <input type="checkbox" id="${sectionId(i)}" data-section="${escapeHtml(s)}" ${selectedSections.has(s)?"checked":""}>
+      <span>${escapeHtml(s)}</span><span class="section-count">${sectionCounts[s]}</span>
+    </label>`).join("");
+  sectionOptions.querySelectorAll('input[data-section]').forEach(cb=>{
+    cb.addEventListener('change',()=>{
+      const sec = cb.dataset.section;
+      if(cb.checked) selectedSections.add(sec); else selectedSections.delete(sec);
+      persistSectionSelection();
+      mobileIndex=0;
+      updateSectionUI();
+      render();
+    });
+  });
+  updateSectionUI();
+}
+
+function persistSectionSelection(){
+  localStorage.setItem(SECTION_FILTER_KEY, JSON.stringify([...selectedSections]));
+}
+
+function updateSectionUI(){
+  const boxes=[...sectionOptions.querySelectorAll('input[data-section]')];
+  boxes.forEach(cb=>{ cb.checked=selectedSections.has(cb.dataset.section); });
+  allSectionsCheck.checked = selectedSections.size === sections.length;
+  allSectionsCheck.indeterminate = selectedSections.size > 0 && selectedSections.size < sections.length;
+  const total = BANK.filter(x=>selectedSections.has(x.section)).length;
+  if(selectedSections.size===sections.length){
+    sectionToggle.textContent=`General · Todas las secciones (${BANK.length})`;
+  } else if(selectedSections.size===1){
+    const s=[...selectedSections][0];
+    sectionToggle.textContent=`${s} (${sectionCounts[s]})`;
+  } else if(selectedSections.size>1){
+    sectionToggle.textContent=`${selectedSections.size} secciones seleccionadas (${total} preguntas)`;
+  } else {
+    sectionToggle.textContent='Selecciona una o más secciones';
+  }
+}
+
+renderSectionOptions();
 
 function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); updateStats(); }
 function grade(id, value) { state[id] = value; save(); render(); }
@@ -198,7 +283,7 @@ function toggleAnswer(id) { document.getElementById("ans-"+id)?.classList.toggle
 
 function filtered() {
   let arr = order.map(id=>BANK.find(x=>x.id===id)).filter(Boolean);
-  if (sectionFilter.value !== "all") arr = arr.filter(x=>x.section===sectionFilter.value);
+  arr = arr.filter(x=>selectedSections.has(x.section));
   const mode = modeFilter.value;
   if (mode==="unanswered") arr = arr.filter(x=>!state[x.id]);
   if (mode==="wrong") arr = arr.filter(x=>state[x.id]==="partial" || state[x.id]==="incorrect");
@@ -268,7 +353,32 @@ function updateStats() {
   document.getElementById("progressBar").style.width=pct+"%";
 }
 
-sectionFilter.addEventListener("change", ()=>{ mobileIndex=0; render(); });
+sectionToggle.addEventListener("click", (e)=>{
+  e.stopPropagation();
+  sectionMulti.classList.toggle("open");
+});
+sectionMenu.addEventListener("click", e=>e.stopPropagation());
+document.addEventListener("click", ()=>sectionMulti.classList.remove("open"));
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") sectionMulti.classList.remove("open"); });
+
+allSectionsCheck.addEventListener("change", ()=>{
+  selectedSections = allSectionsCheck.checked ? new Set(sections) : new Set();
+  persistSectionSelection(); mobileIndex=0; updateSectionUI(); render();
+});
+document.getElementById("selectAllSections").addEventListener("click", ()=>{
+  selectedSections = new Set(sections);
+  persistSectionSelection(); mobileIndex=0; updateSectionUI(); render();
+});
+document.getElementById("clearSections").addEventListener("click", ()=>{
+  selectedSections = new Set();
+  persistSectionSelection(); mobileIndex=0; updateSectionUI(); render();
+});
+document.getElementById("selectTodaySections").addEventListener("click", ()=>{
+  const todays = new Set(BANK.filter(x=>/^today-(2(0[9]|[1-7][0-9]|8[01]))$/.test(x.id)).map(x=>x.section));
+  selectedSections = todays;
+  persistSectionSelection(); mobileIndex=0; updateSectionUI(); render();
+});
+
 modeFilter.addEventListener("change", ()=>{ mobileIndex=0; render(); });
 document.getElementById("shuffleBtn").addEventListener("click",()=>{
   order=[...order].sort(()=>Math.random()-.5);
