@@ -5,6 +5,18 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
 <title>Centro de Estudio · 5 materias · Semanas 1–8</title>
+
+<meta name="theme-color" content="#1f4f76"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Promoción 2027"/>
+<meta name="format-detection" content="telephone=no"/>
+<link rel="manifest" href="./manifest.webmanifest"/>
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png"/>
+<link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png"/>
+
 <style>
 :root {
   --bg:#f4f5f7; --card:#ffffff; --text:#17202a; --muted:#68707a;
@@ -3205,5 +3217,19 @@ document.querySelectorAll('audio').forEach(function(a){
   });
 });
 </script>
+
+<script>
+(function(){
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js', {scope:'./'}).then(function(reg){
+        // Check for a newer package whenever the app is opened.
+        try { reg.update(); } catch(e) {}
+      }).catch(function(err){ console.warn('PWA: service worker no disponible', err); });
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
