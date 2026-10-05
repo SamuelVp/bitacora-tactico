@@ -1,4 +1,4 @@
-const CACHE_NAME = 'promocion-2027-shell-v7';
+const CACHE_NAME = 'promocion-2027-shell-v8';
 const SHELL = [
   './',
   './index.html',
