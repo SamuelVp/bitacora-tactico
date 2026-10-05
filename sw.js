@@ -1,9 +1,10 @@
-const CACHE_NAME = 'promocion-2027-shell-v6';
+const CACHE_NAME = 'promocion-2027-shell-v7';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
   './audio-fix.js',
+  './disciplina_data.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
