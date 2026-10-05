@@ -241,9 +241,10 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 @media(max-width:520px){.overview-stats{grid-template-columns:repeat(2,1fr)}.hero p{font-size:13px}.audio-top{display:block}.audio-top .badge{margin-top:8px}}
 
 /* ===== Selector y cola de Audiolibros ===== */
-.audio-toolbar{display:grid;grid-template-columns:minmax(280px,1fr) auto auto;gap:10px;align-items:start;margin-bottom:14px}
+.audio-toolbar{display:grid;grid-template-columns:minmax(280px,1fr) auto auto auto;gap:10px;align-items:start;margin-bottom:14px}
 .audio-toolbar .multi-select{width:100%}
 .audio-toolbar button{min-height:46px}
+.audio-toolbar .audio-speed-select{min-height:46px;font-weight:800;white-space:nowrap}
 .audio-toolbar .primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:800}
 .audio-select-menu .section-option{cursor:pointer}
 .audio-card{position:relative}
@@ -257,7 +258,7 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 .audio-queue-status{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;align-items:center}
 .audio-queue-status strong{color:var(--text)}
 .audio-queue-status .queue-progress{white-space:nowrap;font-weight:700;color:var(--accent)}
-@media(max-width:760px){.audio-toolbar{grid-template-columns:1fr 1fr}.audio-toolbar .multi-select{grid-column:1/-1}.audio-toolbar button{width:100%}.audio-queue-status{align-items:flex-start;flex-direction:column}}
+@media(max-width:760px){.audio-toolbar{grid-template-columns:1fr 1fr}.audio-toolbar .multi-select{grid-column:1/-1}.audio-toolbar button,.audio-toolbar .audio-speed-select{width:100%}.audio-queue-status{align-items:flex-start;flex-direction:column}}
 
 
 /* ===== Evaluación simplificada v2 ===== */
@@ -502,6 +503,14 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 </div>
 </div>
 <button class="primary" id="playSelectedAudio" type="button">▶ Reproducir seleccionados</button>
+<select class="audio-speed-select" id="audioPlaybackRate" aria-label="Velocidad de reproducción">
+<option value="0.75">Velocidad 0.75×</option>
+<option value="1" selected>Velocidad 1×</option>
+<option value="1.25">Velocidad 1.25×</option>
+<option value="1.5">Velocidad 1.5×</option>
+<option value="1.75">Velocidad 1.75×</option>
+<option value="2">Velocidad 2×</option>
+</select>
 <button id="stopAudioQueue" type="button">■ Detener</button>
 </div>
 <div class="audio-queue-status">
@@ -509,7 +518,7 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 <span class="queue-progress" id="audioQueueProgress">Listo para reproducir</span>
 </div>
 <div class="audio-note" id="audioLibraryNote"><strong>Biblioteca Semanas 1, 2 y 3:</strong> cada audio conserva internamente su identificador de tarea de Runway. Si un enlace de reproducción necesita renovarse en el futuro, puede actualizarse sin volver a generar el audio ni gastar créditos.</div>
-<div class="audio-note"><strong>Cómo funciona:</strong> puedes seleccionar temas desde el desplegable o con la casilla que aparece a la izquierda de cada audio. Pulsa “Reproducir seleccionados” y, al terminar uno, comenzará automáticamente el siguiente. <span id="audioTodayHint">La selección de hoy usa la fecha local del dispositivo. El sábado 26 selecciona toda la Semana 1; el sábado 3 selecciona Semanas 1 y 2; el viernes 9 y sábado 10 selecciona las Semanas 1, 2 y 3 para la auditoría completa y el simulacro de Táctico.</span></div>
+<div class="audio-note"><strong>Cómo funciona:</strong> puedes seleccionar temas desde el desplegable o con la casilla que aparece a la izquierda de cada audio. Pulsa “Reproducir seleccionados” y, al terminar uno, comenzará automáticamente el siguiente. La velocidad elegida se aplica a todos los audios seleccionados y se conserva para la siguiente sesión. <span id="audioTodayHint">La selección de hoy usa la fecha local del dispositivo. El sábado 26 selecciona toda la Semana 1; el sábado 3 selecciona Semanas 1 y 2; el viernes 9 y sábado 10 selecciona las Semanas 1, 2 y 3 para la auditoría completa y el simulacro de Táctico.</span></div>
 <div class="audio-library active" id="audioLibraryTactico">
 <div class="audio-grid" id="audioGridTactico">
 <div class="audio-day-heading"><div><strong>Día 1 · Normatividad nacional e internacional</strong><span>24 audios · 45 min 12 s</span></div><span class="badge">Semana 1</span></div>
@@ -2889,6 +2898,7 @@ const audioMenu = document.getElementById("audioMenu");
 const audioOptions = document.getElementById("audioOptions");
 const allAudioCheck = document.getElementById("allAudioCheck");
 const playSelectedAudioBtn = document.getElementById("playSelectedAudio");
+const audioPlaybackRateSelect = document.getElementById("audioPlaybackRate");
 const stopAudioQueueBtn = document.getElementById("stopAudioQueue");
 const audioSelectionSummary = document.getElementById("audioSelectionSummary");
 const audioQueueProgress = document.getElementById("audioQueueProgress");
@@ -2948,6 +2958,25 @@ const audioMeta = {
 let audioSelections = { tactico:null, ge:null, mom:null, malomi:null, aspectos:null };
 let activeAudioQueue = [];
 let activeAudioIndex = -1;
+const AUDIO_PLAYBACK_RATE_KEY = "bitacora_audio_playback_rate_v1";
+
+function getAudioPlaybackRate(){
+  const rate = Number(audioPlaybackRateSelect?.value || 1);
+  return Number.isFinite(rate) && rate > 0 ? rate : 1;
+}
+function restoreAudioPlaybackRate(){
+  try{
+    const saved = localStorage.getItem(AUDIO_PLAYBACK_RATE_KEY);
+    if(saved && [...audioPlaybackRateSelect.options].some(opt=>opt.value===saved)) audioPlaybackRateSelect.value = saved;
+  }catch(e){}
+}
+function applySelectedAudioPlaybackRate(subject=currentAudioSubject()){
+  const rate = getAudioPlaybackRate();
+  selectedAudioCardsInOrder(subject).forEach(card=>{
+    const audio = card.querySelector("audio");
+    if(audio) audio.playbackRate = rate;
+  });
+}
 
 function currentAudioSubject(){
   return activeSubject === "ge" ? "ge" : (activeSubject === "mom" ? "mom" : (activeSubject === "malomi" ? "malomi" : (activeSubject === "aspectos" ? "aspectos" : "tactico")));
@@ -3008,6 +3037,7 @@ function updateAudioSelectionUI(){
     if(cb) cb.checked = checked;
     card.classList.toggle('selected', checked);
   });
+  applySelectedAudioPlaybackRate(subject);
   allAudioCheck.checked = selected.length===availableCards.length && availableCards.length>0;
   allAudioCheck.indeterminate = selected.length>0 && selected.length<availableCards.length;
 
@@ -3089,6 +3119,7 @@ async function playAudioQueueIndex(index){
     c.classList.toggle('now-playing', c===card);
   });
   audioQueueProgress.textContent = `Reproduciendo ${index+1} de ${activeAudioQueue.length}`;
+  audio.playbackRate = getAudioPlaybackRate();
   try{
     await audio.play();
     card.scrollIntoView({behavior:'smooth',block:'center'});
@@ -3174,10 +3205,20 @@ document.getElementById('selectTodayAudio').addEventListener('click',()=>{
   updateAudioSelectionUI();
 });
 playSelectedAudioBtn.addEventListener('click',startSelectedAudioQueue);
+audioPlaybackRateSelect.addEventListener('change',()=>{
+  const rate = getAudioPlaybackRate();
+  try{ localStorage.setItem(AUDIO_PLAYBACK_RATE_KEY, String(rate)); }catch(e){}
+  applySelectedAudioPlaybackRate();
+  if(activeAudioIndex>=0 && activeAudioQueue[activeAudioIndex]){
+    const currentAudio = activeAudioQueue[activeAudioIndex].querySelector('audio');
+    if(currentAudio) currentAudio.playbackRate = rate;
+  }
+});
 stopAudioQueueBtn.addEventListener('click',()=>stopAudioQueue(true));
 document.addEventListener('click',()=>audioMulti.classList.remove('open'));
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') audioMulti.classList.remove('open'); });
 
+restoreAudioPlaybackRate();
 ensureAudioSelection('tactico');
 ensureAudioSelection('ge');
 ensureAudioSelection('mom');
