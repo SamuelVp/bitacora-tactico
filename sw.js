@@ -1,8 +1,9 @@
-const CACHE_NAME = 'promocion-2027-shell-v4';
+const CACHE_NAME = 'promocion-2027-shell-v5';
 const SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './audio-fix.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
@@ -71,6 +72,35 @@ self.addEventListener('activate', event => {
   );
 });
 
+
+async function injectAudioFix(response) {
+  if (!response) return response;
+  const type = response.headers.get('content-type') || '';
+  if (!type.includes('text/html')) return response;
+
+  const text = await response.text();
+  if (text.includes('audio-fix.js')) {
+    return new Response(text, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    });
+  }
+
+  const injected = text.includes('</body>')
+    ? text.replace('</body>', '<script src="./audio-fix.js"></script></body>')
+    : text + '<script src="./audio-fix.js"></script>';
+
+  const headers = new Headers(response.headers);
+  headers.delete('content-length');
+
+  return new Response(injected, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -110,11 +140,12 @@ self.addEventListener('fetch', event => {
 
       if (cached) {
         event.waitUntil(networkPromise);
-        return cached;
+        return injectAudioFix(cached.clone());
       }
       const network = await networkPromise;
-      if (network) return network;
-      return (await cache.match('./index.html')) || Response.error();
+      if (network) return injectAudioFix(network.clone());
+      const fallback = await cache.match('./index.html');
+      return fallback ? injectAudioFix(fallback.clone()) : Response.error();
     })());
   }
 });
