@@ -490,7 +490,7 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 <div class="multi-actions">
 <button id="selectAllAudio" type="button">Todas</button>
 <button id="selectTodayAudio" type="button">Solo hoy</button>
-<div style="font-size:12px;color:#64748b;padding:6px 2px 2px">La selección de hoy usa la fecha local del dispositivo. El sábado 26 selecciona toda la Semana 1; el sábado 3 selecciona Semanas 1 y 2; el viernes 9 y sábado 10 selecciona las Semanas 1, 2 y 3 para la auditoría completa y el simulacro de Táctico.</div>
+<div style="font-size:12px;color:#64748b;padding:6px 2px 2px">«Solo hoy» usa la fecha local y el calendario de cada materia. Durante las vacaciones (24 oct.–8 nov.) no hay audios programados.</div>
 <button id="clearAudio" type="button">Ninguna</button>
 </div>
 <label class="section-master">
@@ -516,7 +516,7 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 <span class="queue-progress" id="audioQueueProgress">Listo para reproducir</span>
 </div>
 <div class="audio-note" id="audioLibraryNote"><strong>Biblioteca Semanas 1, 2 y 3:</strong> cada audio conserva internamente su identificador de tarea de Runway. Si un enlace de reproducción necesita renovarse en el futuro, puede actualizarse sin volver a generar el audio ni gastar créditos.</div>
-<div class="audio-note"><strong>Cómo funciona:</strong> puedes seleccionar temas desde el desplegable o con la casilla que aparece a la izquierda de cada audio. Pulsa “Reproducir seleccionados” y, al terminar uno, comenzará automáticamente el siguiente. La velocidad elegida se aplica a todos los audios seleccionados y se conserva para la siguiente sesión. <span id="audioTodayHint">La selección de hoy usa la fecha local del dispositivo. El sábado 26 selecciona toda la Semana 1; el sábado 3 selecciona Semanas 1 y 2; el viernes 9 y sábado 10 selecciona las Semanas 1, 2 y 3 para la auditoría completa y el simulacro de Táctico.</span></div>
+<div class="audio-note"><strong>Cómo funciona:</strong> puedes seleccionar temas desde el desplegable o con la casilla que aparece a la izquierda de cada audio. Pulsa “Reproducir seleccionados” y, al terminar uno, comenzará automáticamente el siguiente. La velocidad elegida se aplica a todos los audios seleccionados y se conserva para la siguiente sesión. <span id="audioTodayHint">«Solo hoy» usa la fecha local y el calendario de cada materia. Durante las vacaciones (24 oct.–8 nov.) no hay audios programados.</span></div>
 <div class="audio-library active" id="audioLibraryTactico">
 <div class="audio-grid" id="audioGridTactico">
 <div class="audio-day-heading"><div><strong>Día 1 · Normatividad nacional e internacional</strong><span>24 audios · 45 min 12 s</span></div><span class="badge">Semana 1</span></div>
@@ -2924,7 +2924,7 @@ const audioMeta = {
     header: "Semanas 1, 2 y 3 · 116 audios por tema",
     desc: "116 audios organizados por semana, día y tema. Puedes escuchar uno, varios o todo el material en reproducción continua.",
     note: "<strong>Biblioteca Semanas 1, 2 y 3:</strong> cada audio conserva internamente su identificador de tarea de Runway. Si un enlace de reproducción necesita renovarse en el futuro, puede actualizarse sin volver a generar el audio ni gastar créditos.",
-    todayHint: "La selección de hoy usa la fecha local del dispositivo. El sábado 26 selecciona toda la Semana 1; el sábado 3 selecciona Semanas 1 y 2; el viernes 9 y sábado 10 selecciona las Semanas 1, 2 y 3 para la auditoría completa y el simulacro de Táctico.",
+    todayHint: "«Solo hoy» usa la fecha local y el calendario de cada materia. Durante las vacaciones (24 oct.–8 nov.) no hay audios programados.",
     count: 116
   },
   ge: {
@@ -2948,7 +2948,7 @@ const audioMeta = {
     header: "MALOMI · 74 audios por tema",
     desc: "74 audios ya generados del Manual de Logística Militar, organizados en cinco bloques temáticos y listos para reproducción continua.",
     note: "<strong>Biblioteca MALOMI:</strong> estos 74 audios son los archivos ya generados. El index apunta a la carpeta Audios_MALOMI y no genera ni consume créditos.",
-    todayHint: "MALOMI corresponde a las Semanas 5 y 6, del 19 de octubre al 1 de noviembre de 2026.",
+    todayHint: "MALOMI: sesiones del 19 al 23 de octubre y del 9 al 13 de noviembre. Del 24 de octubre al 8 de noviembre: vacaciones, sin audios del día.",
     count: 74
   },
   aspectos: {
@@ -3156,7 +3156,7 @@ function switchAudioLibrary(){
   audioHeroDesc.textContent = meta.desc;
   audioLibraryNote.innerHTML = meta.note;
   audioTodayHint.textContent = meta.todayHint;
-  document.getElementById('selectTodayAudio').style.display = (subject==='malomi' || subject==='aspectos' || subject==='disciplina') ? 'none' : '';
+  document.getElementById('selectTodayAudio').style.display = (subject==='disciplina') ? 'none' : '';
   stopAudioQueue(false);
   renderAudioOptions();
 }
@@ -3211,10 +3211,20 @@ document.getElementById('clearAudio').addEventListener('click',()=>{
   persistAudioSelection(subject);
   updateAudioSelectionUI();
 });
+// Fechas de MALOMI: distribución de audios por temas del calendario aprobado.
+const MALOMI_AUDIO_DAYS = {"2026-10-19":[1,13],"2026-10-20":[14,21],"2026-10-21":[22,28],"2026-10-22":[29,32],"2026-10-23":[33,40],"2026-11-09":[41,46],"2026-11-10":[47,53],"2026-11-11":[54,62],"2026-11-12":[63,70],"2026-11-13":[71,74]};
 document.getElementById('selectTodayAudio').addEventListener('click',()=>{
   const subject = currentAudioSubject();
   const today = localDateKey();
-  audioSelections[subject] = new Set(availableAudioCardsForSubject(subject).filter(c=>(c.dataset.audioDate||'').split(',').includes(today)).map(c=>c.dataset.audioId));
+  const malomiRange = subject==='malomi' ? MALOMI_AUDIO_DAYS[today] : null;
+  audioSelections[subject] = new Set(availableAudioCardsForSubject(subject).filter(c=>{
+    if(subject==='malomi'){
+      if(!malomiRange) return false;
+      const n=Number((c.dataset.audioId||'').replace('audio-malomi-',''));
+      return n>=malomiRange[0] && n<=malomiRange[1];
+    }
+    return (c.dataset.audioDate||'').split(',').includes(today);
+  }).map(c=>c.dataset.audioId));
   persistAudioSelection(subject);
   updateAudioSelectionUI();
 });
