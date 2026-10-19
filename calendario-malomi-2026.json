@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "source": "Calendario_MALOMI_COMPLETO_Corregido_2026.pdf aprobado 19 octubre 2026",
+  "manual": "Manual de Logística Militar, edición 2018",
+  "timeZone": "America/Mexico_City",
+  "days": [
+    {
+      "date": "2026-10-19",
+      "subject": "MALOMI",
+      "part": "Primera Parte",
+      "pageStart": 2,
+      "pageEnd": 9,
+      "paragraphStart": 1,
+      "paragraphEnd": 45,
+      "scope": "Capítulos I y II: generalidades, abastecimiento, clases, necesidades, adquisición, almacenamiento y distribución",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-10-20",
+      "subject": "MALOMI",
+      "part": "Primera Parte",
+      "pageStart": 10,
+      "pageEnd": 15,
+      "paragraphStart": 46,
+      "paragraphEnd": 78,
+      "scope": "Capítulo II: evacuación de materiales, mantenimiento, evacuación y hospitalización de personal",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-10-21",
+      "subject": "MALOMI",
+      "part": "Primera Parte",
+      "pageStart": 16,
+      "pageEnd": 20,
+      "paragraphStart": 79,
+      "paragraphEnd": 99,
+      "scope": "Capítulo II: evacuación de animales, construcción y alojamiento, transporte e inicio de mano de obra",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-10-22",
+      "subject": "MALOMI",
+      "part": "Primera Parte",
+      "pageStart": 21,
+      "pageEnd": 24,
+      "paragraphStart": 100,
+      "paragraphEnd": 120,
+      "scope": "Capítulo II: cierre de mano de obra; Capítulo III: Principios de la Logística",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-10-23",
+      "subject": "MALOMI",
+      "part": "Primera Parte",
+      "pageStart": 25,
+      "pageEnd": 28,
+      "paragraphStart": 121,
+      "paragraphEnd": 142,
+      "scope": "Capítulo IV: Los Servicios completo",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-11-09",
+      "subject": "MALOMI",
+      "part": "Tercera Parte",
+      "pageStart": 29,
+      "pageEnd": 37,
+      "paragraphStart": 301,
+      "paragraphEnd": 357,
+      "scope": "Capítulos I y II completos; Capítulo III: Servicio de Ingenieros",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-11-10",
+      "subject": "MALOMI",
+      "part": "Tercera Parte",
+      "pageStart": 38,
+      "pageEnd": 46,
+      "paragraphStart": 358,
+      "paragraphEnd": 395,
+      "scope": "Capítulo III: secciones segunda a cuarta",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-11-11",
+      "subject": "MALOMI",
+      "part": "Tercera Parte",
+      "pageStart": 47,
+      "pageEnd": 55,
+      "paragraphStart": 396,
+      "paragraphEnd": 451,
+      "scope": "Capítulo III: secciones quinta a octava, Servicio de Aeronáutica",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-11-12",
+      "subject": "MALOMI",
+      "part": "Tercera Parte",
+      "pageStart": 56,
+      "pageEnd": 61,
+      "paragraphStart": 452,
+      "paragraphEnd": 484,
+      "scope": "Capítulo IV: Servicios Administrativos y Generales, primeras tres secciones",
+      "dayType": "study"
+    },
+    {
+      "date": "2026-11-13",
+      "subject": "MALOMI",
+      "part": "Tercera Parte",
+      "pageStart": 62,
+      "pageEnd": 68,
+      "paragraphStart": 485,
+      "paragraphEnd": 524,
+      "scope": "Capítulo IV: cierre y Capítulo V completo",
+      "dayType": "study"
+    }
+  ],
+  "break": {
+    "start": "2026-10-24",
+    "end": "2026-11-08",
+    "inclusive": true,
+    "noStudy": true,
+    "activitiesDisabled": [
+      "estudio",
+      "repasos",
+      "audios",
+      "preguntas",
+      "exámenes"
+    ]
+  },
+  "resume": "2026-11-09",
+  "note": "Reproduce exactamente el calendario aprobado. No altera el banco de preguntas ni audios. El aplicativo debe leer este archivo para incorporarlo a la interfaz."
+}
