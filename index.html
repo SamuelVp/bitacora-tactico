@@ -2967,7 +2967,12 @@ const MALOMI_AUDIO_ORDER_V2 = [1,2,3,10,11,4,5,6,13,8,7,12,9,
     const bId=Number((b.dataset.audioId||'').replace('audio-malomi-',''));
     return (rank.get(aId)??999)-(rank.get(bId)??999);
   });
-  for(const card of ordered) card.parentElement?.appendChild(card);
+  // Mantener los encabezados de los cinco bloques en su posición.
+  // Solo el primer bloque tiene audios de repaso cuya numeración rompe el orden temático.
+  const firstBlock=ordered.filter(card=>Number(card.dataset.audioId.replace('audio-malomi-',''))<=13);
+  const secondHeading=[...library.querySelectorAll('.audio-day-heading')][1];
+  if(!secondHeading || firstBlock.length!==13) return;
+  for(const card of firstBlock) secondHeading.before(card);
 })();
 const audioMeta = {
   tactico: {
