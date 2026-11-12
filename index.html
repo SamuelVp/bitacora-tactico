@@ -2947,6 +2947,28 @@ const audioLibraries = {
   aspectos: document.getElementById("audioLibraryASPECTOS"),
   disciplina: document.getElementById("audioLibraryDISCIPLINA")
 };
+// MALOMI: secuencia pedagógica conforme a los temas del manual.
+// Los A10-A13 son repasos temáticos del abastecimiento y deben aparecer junto
+// a sus contenidos, no después de toda la primera serie de abastecimiento.
+// Se preservan IDs, archivos MP3, selección y control global de velocidad.
+const MALOMI_AUDIO_ORDER_V2 = [1,2,3,10,11,4,5,6,13,8,7,12,9,
+  ...Array.from({length:61},(_,i)=>i+14)];
+(function orderMalomiAudioLibrary(){
+  const library=audioLibraries.malomi;
+  if(!library) return;
+  const cards=[...library.querySelectorAll('.audio-card')];
+  const rank=new Map(MALOMI_AUDIO_ORDER_V2.map((n,i)=>[n,i]));
+  if(cards.length!==74 || new Set(cards.map(c=>c.dataset.audioId)).size!==74){
+    console.warn('MALOMI: número de tarjetas inesperado; se conserva el orden original.');
+    return;
+  }
+  const ordered=cards.slice().sort((a,b)=>{
+    const aId=Number((a.dataset.audioId||'').replace('audio-malomi-',''));
+    const bId=Number((b.dataset.audioId||'').replace('audio-malomi-',''));
+    return (rank.get(aId)??999)-(rank.get(bId)??999);
+  });
+  for(const card of ordered) card.parentElement?.appendChild(card);
+})();
 const audioMeta = {
   tactico: {
     hero: "Táctico · Semanas 1, 2 y 3",
