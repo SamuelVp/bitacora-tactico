@@ -3396,9 +3396,14 @@ document.querySelectorAll('audio').forEach(function(a){
     for(let k=0;k<8;k++) c=(c&1) ? (0xEDB88320^(c>>>1)) : (c>>>1);
     crcTable[n]=c>>>0;
   }
-  function crc32(bytes) {
+  const pause = () => new Promise(resolve=>setTimeout(resolve,0));
+  async function crc32(bytes) {
     let c=0xFFFFFFFF;
-    for(let i=0;i<bytes.length;i++) c=crcTable[(c^bytes[i])&255]^(c>>>8);
+    for(let start=0;start<bytes.length;start+=1048576){
+      const end=Math.min(start+1048576,bytes.length);
+      for(let i=start;i<end;i++) c=crcTable[(c^bytes[i])&255]^(c>>>8);
+      await pause(); // El navegador puede actualizar la pantalla entre bloques.
+    }
     return (c^0xFFFFFFFF)>>>0;
   }
   function put16(v,n,o) { v.setUint16(o,n,true); }
@@ -3422,18 +3427,56 @@ document.querySelectorAll('audio').forEach(function(a){
     a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),60000);
   }
-  async function getFile(src) {
-    const res=await fetch(new URL(src, document.baseURI).href,{credentials:'same-origin'});
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    return new Uint8Array(await res.arrayBuffer());
+  let cancelDownload=false;
+  let pendingController=null;
+  async function getFile(src,onProgress) {
+    const controller=new AbortController();
+    pendingController=controller;
+    let watchdog;
+    const arm=()=>{
+      clearTimeout(watchdog);
+      watchdog=setTimeout(()=>controller.abort('Archivo sin respuesta durante 45 segundos'),45000);
+    };
+    arm();
+    try{
+      const res=await fetch(new URL(src,document.baseURI).href,{credentials:'same-origin',signal:controller.signal});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const total=Number(res.headers.get('content-length'))||0;
+      if(!res.body) {
+        const data=new Uint8Array(await res.arrayBuffer());
+        onProgress?.(data.length,total);
+        return data;
+      }
+      const reader=res.body.getReader(), chunks=[];
+      let loaded=0;
+      while(true){
+        if(cancelDownload) throw new Error('Descarga cancelada');
+        const {done,value}=await reader.read();
+        if(done) break;
+        arm();chunks.push(value);loaded+=value.length;
+        onProgress?.(loaded,total);
+        await pause();
+      }
+      const result=new Uint8Array(loaded);
+      let offset=0;
+      for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.length;}
+      return result;
+    }catch(err){
+      if(controller.signal.aborted) throw new Error('La descarga se detuvo: el archivo dejó de responder.');
+      throw err;
+    }finally {
+      clearTimeout(watchdog);
+      if(pendingController===controller) pendingController=null;
+    }
   }
-  function zipStore(files) {
+  async function zipStore(files) {
     const parts=[], central=[];
     let offset=0, centralSize=0;
     for(const file of files) {
       const name=encoder.encode(file.name);
       const bytes=file.bytes;
-      const crc=crc32(bytes), size=bytes.byteLength;
+      if(cancelDownload) throw new Error('Descarga cancelada');
+      const crc=await crc32(bytes), size=bytes.byteLength;
       if(size>0xFFFFFFFF || offset+size>0xFFFFFFFF) throw new Error('El ZIP supera 4 GB.');
       const local=new Uint8Array(30+name.length), a=new DataView(local.buffer);
       put32(a,0x04034b50,0);put16(a,20,4);put16(a,0x0800,6);put16(a,0,8);
@@ -3488,13 +3531,22 @@ document.querySelectorAll('audio').forEach(function(a){
     const cards=getCards();
     if(!cards.length) {setMessage('Selecciona al menos un audio disponible de la materia.');return;}
     button.disabled=true;
+    cancelDownload=false;
     const files=[], failed=[], used=new Set();
+    const cancelBtn=document.getElementById('cancelZipDownload');
+    cancelBtn.hidden=false;
+    const previousLabel=button.textContent;
+    button.textContent='Descargando archivos…';
     try {
       for(let i=0;i<cards.length;i++){
+        if(cancelDownload) throw new Error('Descarga cancelada');
         const src=srcFor(cards[i]);
-        setMessage('Preparando '+(i+1)+' de '+cards.length+' archivos…');
+        setMessage('Descargando '+(i+1)+' de '+cards.length+' archivos…');
         try{
-          const bytes=await getFile(src);
+          const bytes=await getFile(src,(loaded,total)=>{
+            const pct=total?' ('+Math.min(100,Math.round(loaded*100/total))+'%)':' ('+(loaded/1048576).toFixed(1)+' MB)';
+            setMessage('Descargando archivo '+(i+1)+' de '+cards.length+pct+'. Puedes seguir usando la página.');
+          });
           let filename=cleanName(decodeURIComponent(new URL(src,document.baseURI).pathname.split('/').pop())||'audio_'+(i+1)+'.mp3');
           if(!/\.[a-z0-9]{2,5}$/i.test(filename)) filename+='.mp3';
           const original=filename;let j=2;
@@ -3508,14 +3560,21 @@ document.querySelectorAll('audio').forEach(function(a){
       }
       if(!files.length) throw new Error('No fue posible obtener los archivos seleccionados.');
       setMessage('Creando ZIP de '+files.length+' archivos…');
-      const blob=zipStore(files);
+      await pause();
+      const blob=await zipStore(files);
+      if(cancelDownload) throw new Error('Descarga cancelada');
       downloadBlob(blob,subjectName()+'_Audios_Seleccionados.zip');
       setMessage('ZIP descargado: '+files.length+' archivo(s).'+(failed.length?' No se pudieron incluir '+failed.length+'.':''));
       if(failed.length) console.warn('Audios omitidos en ZIP:',failed);
     }catch(err){
       setMessage('Error: '+err.message);
       alert('No se pudo generar el ZIP: '+err.message);
-    }finally{button.disabled=false;}
+    }finally{
+      button.disabled=false;
+      button.textContent=previousLabel;
+      cancelBtn.hidden=true;
+      pendingController=null;
+    }
   }
   function install() {
     const toolbar=document.querySelector('#audioScreen .audio-toolbar');
@@ -3526,6 +3585,14 @@ document.querySelectorAll('audio').forEach(function(a){
     btn.title='Descarga los audios marcados de la materia actual en un único archivo ZIP';
     btn.addEventListener('click',()=>saveZip(btn));
     toolbar.appendChild(btn);
+    const cancel=document.createElement('button');
+    cancel.type='button';cancel.id='cancelZipDownload';cancel.textContent='Cancelar descarga';cancel.hidden=true;
+    cancel.addEventListener('click',()=>{
+      cancelDownload=true;
+      pendingController?.abort();
+      setMessage('Cancelando descarga…');
+    });
+    toolbar.appendChild(cancel);
     const status=document.createElement('div');
     status.id='zipDownloadStatus';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     status.style.cssText='font-size:12px;color:#64748b;grid-column:1/-1;';
@@ -3533,7 +3600,7 @@ document.querySelectorAll('audio').forEach(function(a){
     toolbar.insertAdjacentElement('afterend',status);
     installIndividualButtons();
     const style=document.createElement('style');
-    style.textContent='#downloadSelectedZip{white-space:normal}.audio-download-one{display:inline-block;margin-top:7px;padding:6px 10px;font-size:12px;background:#fff;color:#1f4f76;border:1px solid #b7cbdc;border-radius:8px;cursor:pointer}.audio-download-one:disabled,#downloadSelectedZip:disabled{opacity:.55;cursor:wait}@media(max-width:650px){#downloadSelectedZip{width:100%}}';
+    style.textContent='#downloadSelectedZip{white-space:normal}.audio-download-one{display:inline-block;margin-top:7px;padding:6px 10px;font-size:12px;background:#fff;color:#1f4f76;border:1px solid #b7cbdc;border-radius:8px;cursor:pointer}.audio-download-one:disabled,#downloadSelectedZip:disabled{opacity:.55;cursor:wait}#cancelZipDownload[hidden]{display:none}#cancelZipDownload{border:1px solid #bf3d3d;color:#bf3d3d}@media(max-width:650px){#downloadSelectedZip{width:100%}}';
     document.head.appendChild(style);
     const obs=new MutationObserver(()=>installIndividualButtons());
     obs.observe(document.getElementById('audioScreen'),{subtree:true,childList:true});
