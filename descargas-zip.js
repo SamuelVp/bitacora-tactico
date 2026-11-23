@@ -154,3 +154,19 @@
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install,{once:true});
   else install();
 })();
+/* Acceso independiente al juego MOM. No altera reproductores ni descargas. */
+(() => {
+  function addGameButton() {
+    if (document.getElementById('momGameNavButton')) return;
+    const link = document.createElement('a');
+    link.id = 'momGameNavButton';
+    link.href = 'juego-mom.html';
+    link.textContent = '🎮 Juego';
+    link.title = 'Completa definiciones del MOM en tres modalidades';
+    link.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:10px;background:#157658;color:white;font-weight:700;text-decoration:none;margin:8px;box-shadow:0 2px 7px #0002;z-index:5;';
+    const nav = document.querySelector('header nav, .main-nav, .top-nav, .nav-tabs, .tabs, header, .app-header, #homeScreen, main');
+    if (nav) nav.prepend(link); else document.body.prepend(link);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', addGameButton, { once:true });
+  else addGameButton();
+})();
