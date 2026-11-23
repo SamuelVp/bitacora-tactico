@@ -201,6 +201,7 @@ body{min-height:100vh}
 .subject-card.active-card,.mode-card{cursor:pointer}
 .subject-card.active-card:hover,.mode-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(24,45,65,.10);border-color:#b8cad8}
 .subject-card.disabled{opacity:.64;cursor:default}
+#gameModeBtn[disabled]{opacity:.65;cursor:not-allowed;transform:none;box-shadow:0 3px 14px rgba(24,45,65,.05)}
 .card-icon{width:46px;height:46px;border-radius:14px;background:#eaf2f8;color:var(--accent);display:grid;place-items:center;font-size:22px;margin-bottom:15px}
 .subject-card h4,.mode-card h4{font-size:18px;margin:0 0 7px}.subject-card p,.mode-card p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .card-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:18px;padding-top:13px;border-top:1px solid #edf0f3;font-size:12px;color:var(--muted)}
@@ -317,7 +318,6 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 <h2>Materias</h2>
 <p>Entra a Táctico, Guerra Electrónica, MALOMI, MOM, Aspectos Técnicos o Disciplina. Las seis materias incluyen evaluación oral, examen de opción múltiple y biblioteca de audios.</p>
 </div>
-<div style="margin:14px 0 18px"><a id="momGameNavButton" href="./juego-mom.html" style="display:inline-flex;align-items:center;gap:8px;padding:13px 18px;background:#167654;color:white;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none;box-shadow:0 2px 8px #0002">🎮 Juego de estudio · MOM</a><p style="font-size:13px;color:var(--muted);margin-top:7px">Tres modalidades: inicial, intermedio y avanzado.</p></div>
 <div class="section-heading"><h3>Mis materias</h3><span id="homeSummary">6 materias disponibles</span></div>
 <div class="subject-grid">
 <button class="subject-card active-card" id="tacticoSubjectBtn" type="button">
@@ -391,6 +391,7 @@ body:not(.screen-study) .mobile-nav{display:none!important}
 <button class="mode-card" id="oralModeBtn" type="button"><span class="arrow">›</span><div class="card-icon">◉</div><h4>Evaluación oral</h4><p>Pregunta, respuesta oculta y calificación Correcta / Incompleta / Incorrecta.</p><div class="card-bottom"><span>Recuperación activa</span><span class="badge">Estudiar</span></div></button>
 <button class="mode-card" id="mcModeBtn" type="button"><span class="arrow">›</span><div class="card-icon">✓</div><h4>Opción múltiple</h4><p>Cuatro opciones por pregunta, retroalimentación inmediata y repetición de incorrectas.</p><div class="card-bottom"><span>Reconocimiento</span><span class="badge">Practicar</span></div></button>
 <button class="mode-card" id="audioModeBtn" type="button"><span class="arrow">›</span><div class="card-icon">▶</div><h4>Audiolibros</h4><p>Escucha las explicaciones narradas del contenido que hayas trabajado.</p><div class="card-bottom"><span>Repaso cotidiano</span><span class="badge">Escuchar</span></div></button>
+<button class="mode-card" id="gameModeBtn" type="button"><span class="arrow">›</span><div class="card-icon">🎮</div><h4>Juego</h4><p id="gameModeDesc">Completa definiciones del manual en tres niveles de dificultad.</p><div class="card-bottom"><span>Memoria activa</span><span class="badge" id="gameModeBadge">Jugar</span></div></button>
 </div>
 </div>
 </section>
@@ -2876,7 +2877,7 @@ function showScreen(name){
   if(name==="subject") setGlobalHeader(subjectName(),"Elige cómo quieres estudiar",true);
   if(name==="study") setGlobalHeader(appMode==="mcq"?subjectName()+" · Opción múltiple":subjectName()+" · Evaluación oral","Banco general de preguntas",true);
   if(name==="audio"){ switchAudioLibrary(); const meta=audioMeta[currentAudioSubject()]; setGlobalHeader(meta.hero+" · Audiolibros",meta.header,true); }
-  if(name==="subject"){ updateSubjectChrome(); updateSubjectSummary(); renderCalendar(); }
+  if(name==="subject"){ updateSubjectChrome(); updateSubjectSummary(); renderCalendar(); updateGameAvailability(); }
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function updateSubjectSummary(){
@@ -2912,6 +2913,7 @@ function activateSubject(subject){
   clearExam();
   renderSectionOptions();
   updateSubjectChrome();
+  updateGameAvailability();
   renderCalendar();
   updateModeUI();
   render();
@@ -2928,6 +2930,19 @@ document.getElementById("disciplinaSubjectBtn").addEventListener("click",()=>act
 document.getElementById("oralModeBtn").addEventListener("click",()=>openStudyMode("open"));
 document.getElementById("mcModeBtn").addEventListener("click",()=>openStudyMode("mcq"));
 document.getElementById("audioModeBtn").addEventListener("click",()=>showScreen("audio"));
+function updateGameAvailability(){
+  const btn=document.getElementById("gameModeBtn");
+  const ready=activeSubject==="mom";
+  btn.disabled=!ready;
+  document.getElementById("gameModeDesc").textContent=ready
+    ?"Completa textos del MOM original en tres niveles: inicial, intermedio y avanzado."
+    :"El juego aparecerá aquí cuando incorporemos el texto del manual de esta materia.";
+  document.getElementById("gameModeBadge").textContent=ready?"Jugar":"Por preparar";
+}
+document.getElementById("gameModeBtn").addEventListener("click",()=>{
+  if(activeSubject==="mom")window.location.href="./juego-mom.html";
+});
+
 document.getElementById("studyHomeBtn").addEventListener("click",()=>showScreen("subject"));
 globalBack.addEventListener("click",()=>{
   if(currentScreen==="subject") showScreen("home");
