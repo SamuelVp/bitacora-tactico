@@ -52,8 +52,8 @@ function showGameAnimation(success){
   const overlay=E("gameCelebration");
   clearTimeout(sceneTimeout);
   overlay.className=success?"visible good":"visible bad";
-  E("gameSceneTitle").textContent=success?"¡VISTA A LA DERECHA… SALUDEN!":"¡TOCA REPASAR, SOLDADO!";
-  E("gameSceneSubtitle").textContent=success?"¡Misión cumplida! Todos los conceptos correctos.":"¡Una corrección de caricatura! Revisa las palabras señaladas.";
+  E("gameSceneTitle").textContent=success?"¡VISTA A LA DERECHA… YA!":"¡TOCA REPASAR, SOLDADO!";
+  E("gameSceneSubtitle").textContent="";
   E("gameSceneSoldiers").innerHTML=success?
     soldier("saluter")+soldier("saluter")+soldier("saluter"):
     soldier("teacher")+soldier("front");
